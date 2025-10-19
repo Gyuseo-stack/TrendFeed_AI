@@ -19,6 +19,8 @@ This prototype pairs a minimal Node.js backend with a static single-page fronten
    cp .env.example .env
    # Edit .env and fill in OPENAI_API_KEY, optionally WORKFLOW_VERSION, etc.
    ```
+   The server automatically loads variables from `.env` on startup (values in the
+   shell take precedence), so you don't need any extra tooling like `dotenv`.
 2. Install dependencies – there are none beyond Node.js built-ins.
 
 ## Running the server

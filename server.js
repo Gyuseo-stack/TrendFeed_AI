@@ -4,6 +4,36 @@ const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 
+function loadEnvFile() {
+  try {
+    const envPath = path.join(__dirname, '.env');
+    if (!fs.existsSync(envPath)) {
+      return;
+    }
+
+    const raw = fs.readFileSync(envPath, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      if (!line || line.trim().startsWith('#')) {
+        continue;
+      }
+      const idx = line.indexOf('=');
+      if (idx === -1) {
+        continue;
+      }
+      const key = line.slice(0, idx).trim();
+      if (!key || Object.prototype.hasOwnProperty.call(process.env, key)) {
+        continue;
+      }
+      const value = line.slice(idx + 1).trim();
+      process.env[key] = value;
+    }
+  } catch (err) {
+    console.warn('Failed to load .env file:', err.message);
+  }
+}
+
+loadEnvFile();
+
 const PORT = parseInt(process.env.PORT || '8787', 10);
 const WORKFLOW_ID = process.env.WORKFLOW_ID || 'wf_68f08454146481909e81ff2f3bee5c37034ad87c959917ee';
 const WORKFLOW_VERSION = process.env.WORKFLOW_VERSION ? Number(process.env.WORKFLOW_VERSION) : undefined;
