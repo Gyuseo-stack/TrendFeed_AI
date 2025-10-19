@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>TrendFeed AI Trend Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --panel: rgba(15, 23, 42, 0.85);
+      --text: #e2e8f0;
+      --accent: #38bdf8;
+      --error-bg: rgba(220, 38, 38, 0.15);
+      --error-text: #fca5a5;
+      --success: #4ade80;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #334155 100%);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 960px;
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: 0 18px 48px rgba(15, 23, 42, 0.45);
+      padding: 32px;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.8rem;
+    }
+
+    form {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.9rem;
+      gap: 8px;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    button {
+      background: var(--accent);
+      color: #0f172a;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 22px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    button[disabled] {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    button:not([disabled]):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.35);
+    }
+
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    #statusMessage {
+      min-height: 1.2rem;
+      font-size: 0.9rem;
+    }
+
+    #errorBanner {
+      display: none;
+      background: var(--error-bg);
+      color: var(--error-text);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      padding: 12px 16px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    pre {
+      background: rgba(15, 23, 42, 0.55);
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 20px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.95rem;
+      line-height: 1.45;
+      margin: 0;
+      max-height: 60vh;
+      overflow: auto;
+    }
+
+    details {
+      margin-top: 16px;
+      font-size: 0.9rem;
+    }
+
+    summary {
+      cursor: pointer;
+    }
+
+    @media (max-width: 600px) {
+      main {
+        padding: 20px;
+      }
+
+      form {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>오늘의 AI 트렌드 리포트</h1>
+    <div id="errorBanner"></div>
+    <form id="controlForm">
+      <label>
+        도메인 (선택)
+        <select id="domainSelect">
+          <option value="general">General</option>
+          <option value="healthcare">Healthcare / Bio</option>
+          <option value="finance">Finance / Investment</option>
+          <option value="retail">Retail / E-commerce</option>
+          <option value="education">Education / EdTech</option>
+          <option value="mobility">Automotive / Mobility</option>
+          <option value="manufacturing">Manufacturing / Robotics</option>
+          <option value="security">Security / Privacy</option>
+          <option value="media">Media / Entertainment</option>
+          <option value="public">Government / Policy</option>
+        </select>
+      </label>
+      <label>
+        자유 입력 도메인 (선택)
+        <input type="text" id="domainCustom" maxlength="200" placeholder="예: 생성형 AI" autocomplete="off">
+      </label>
+      <label>
+        조회 기간 (일)
+        <input type="number" id="queryWindow" min="1" max="30" value="10">
+      </label>
+      <label>
+        직접 입력 지시문 (선택)
+        <input type="text" id="customPrompt" maxlength="500" placeholder="요청 문장을 직접 입력">
+      </label>
+    </form>
+
+    <div class="controls">
+      <button id="generateBtn" type="button">리포트 생성</button>
+      <button id="copyBtn" type="button">복사하기</button>
+      <label class="checkbox">
+        <input type="checkbox" id="autoRefresh">
+        5분마다 자동 새로고침
+      </label>
+      <span id="statusMessage"></span>
+    </div>
+
+    <pre id="reportOutput">리포트를 요청해 주세요.</pre>
+    <details id="metaDetails" open>
+      <summary>요청 메타데이터</summary>
+      <div id="metaContent">도메인과 조회 기간, 캐시 여부가 여기에 표시됩니다.</div>
+    </details>
+  </main>
+
+  <script>
+    const form = document.getElementById('controlForm');
+    const generateBtn = document.getElementById('generateBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const autoRefresh = document.getElementById('autoRefresh');
+    const statusMessage = document.getElementById('statusMessage');
+    const output = document.getElementById('reportOutput');
+    const errorBanner = document.getElementById('errorBanner');
+    const metaDetails = document.getElementById('metaContent');
+
+    let lastPayload = null;
+    let autoRefreshTimer = null;
+
+    const domainLabelMap = {
+      general: '일반 (General)',
+      healthcare: '헬스케어 / 바이오 (Healthcare)',
+      finance: '금융 / 투자 (Finance)',
+      retail: '리테일 / 이커머스 (Retail)',
+      education: '교육 / 에듀테크 (Education)',
+      mobility: '모빌리티 (Mobility)',
+      manufacturing: '제조 / 로보틱스 (Manufacturing)',
+      security: '보안 / 프라이버시 (Security)',
+      media: '미디어 / 엔터테인먼트 (Media)',
+      public: '정부 / 정책 (Public)'
+    };
+
+    function formatDomainLabel(value) {
+      if (!value) return '일반';
+      const normalized = value.toLowerCase();
+      return domainLabelMap[normalized] || value;
+    }
+
+    function getFormValues() {
+      const domainSelect = document.getElementById('domainSelect').value.trim();
+      const domainCustom = document.getElementById('domainCustom').value.trim();
+      const queryWindowInput = document.getElementById('queryWindow').value;
+      const customPrompt = document.getElementById('customPrompt').value.trim();
+
+      const domain = domainCustom || domainSelect;
+      const queryWindow = Number.parseInt(queryWindowInput, 10);
+
+      return {
+        domain,
+        query_window_days: Number.isNaN(queryWindow) ? 10 : Math.min(30, Math.max(1, queryWindow)),
+        input_as_text: customPrompt || undefined
+      };
+    }
+
+    function showError(message) {
+      errorBanner.textContent = message;
+      errorBanner.style.display = 'block';
+    }
+
+    function clearError() {
+      errorBanner.textContent = '';
+      errorBanner.style.display = 'none';
+    }
+
+    function setLoading(isLoading) {
+      if (isLoading) {
+        generateBtn.disabled = true;
+        generateBtn.textContent = '생성 중...';
+      } else {
+        generateBtn.disabled = false;
+        generateBtn.textContent = '리포트 생성';
+      }
+    }
+
+    async function requestReport(payload) {
+      setLoading(true);
+      statusMessage.style.color = '';
+      statusMessage.textContent = 'API 요청 중...';
+      clearError();
+      try {
+        const response = await fetch('/api/trends', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(() => ({ ok: false, message: 'Invalid server response' }));
+
+        if (!response.ok || !data.ok) {
+          const message = data && data.message ? data.message : `요청 실패 (HTTP ${response.status})`;
+          showError(message);
+          statusMessage.textContent = '';
+          return;
+        }
+
+        lastPayload = payload;
+        renderReport(data);
+        statusMessage.textContent = data.meta.cached ? '캐시된 리포트를 불러왔습니다.' : '신규 리포트가 생성되었습니다.';
+      } catch (err) {
+        showError('서버와 통신할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+        statusMessage.textContent = '';
+        statusMessage.style.color = '';
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function renderReport(data) {
+      const safeText = typeof data.report_text === 'string' ? data.report_text : '';
+      output.textContent = safeText;
+
+      const metaLines = [
+        `도메인: ${formatDomainLabel(data.domain)}`,
+        `조회 기간: ${data.query_window_days}일`,
+        `워크플로우 ID: ${data.meta.workflow_id}`,
+        data.meta.version ? `워크플로우 버전: ${data.meta.version}` : null,
+        `캐시 여부: ${data.meta.cached ? '예' : '아니오'}`,
+        `요청 시간: ${data.meta.ts}`,
+        `API 응답 지연: ${data.meta.latency_ms}ms`
+      ].filter(Boolean);
+
+      metaDetails.textContent = metaLines.join('\n');
+    }
+
+    generateBtn.addEventListener('click', () => {
+      const payload = getFormValues();
+      requestReport(payload);
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      const text = output.textContent.trim();
+      if (!text) {
+        statusMessage.textContent = '복사할 리포트가 없습니다.';
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        statusMessage.textContent = '리포트를 클립보드에 복사했습니다.';
+        statusMessage.style.color = 'var(--success)';
+        setTimeout(() => {
+          statusMessage.style.color = '';
+        }, 2000);
+      } catch (err) {
+        statusMessage.textContent = '클립보드 복사에 실패했습니다.';
+      }
+    });
+
+    autoRefresh.addEventListener('change', () => {
+      if (autoRefresh.checked) {
+        clearInterval(autoRefreshTimer);
+        if (lastPayload) {
+          requestReport(lastPayload);
+        }
+        autoRefreshTimer = setInterval(() => {
+          if (lastPayload) {
+            requestReport(lastPayload);
+          }
+        }, 300000);
+      } else {
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+    });
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+    });
+  </script>
+</body>
+</html>
